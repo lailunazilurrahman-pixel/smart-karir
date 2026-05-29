@@ -58,6 +58,7 @@ class UserProfileController extends Controller
             'dagang' => 'jualan',
 
             'coding' => 'ngoding',
+            'ngoding' => 'ngoding',
 
             'ui ux' => 'uiux',
             'ui/ux' => 'uiux',
@@ -65,12 +66,16 @@ class UserProfileController extends Controller
 
             'desain ui' => 'desain',
 
+            'nyanyi' => 'bernyanyi',
+            'menyanyi' => 'bernyanyi',
+            'vokal' => 'bernyanyi',
+
         ];
 
         // Normalisasi skill
         foreach ($skills as &$skill) {
 
-            $skill = trim($skill);
+            $skill = trim(strtolower($skill));
 
             if (array_key_exists($skill, $mapping)) {
 
@@ -130,6 +135,13 @@ class UserProfileController extends Controller
         // Ambil semua career yang cocok
         $careers = collect($matchedCareers);
 
+        // FILTER minimal kecocokan 50%
+        $careers = $careers->filter(function ($career) {
+
+            return $career->match_percent >= 50;
+
+        });
+
         // Jika kosong gunakan minat
         if ($careers->count() == 0) {
 
@@ -144,9 +156,18 @@ class UserProfileController extends Controller
         // Jika masih kosong
         if ($careers->count() == 0) {
 
-            $careers = Career::orderByDesc('score')
-                ->get();
+            return view(
+                'user.recommendation',
+                [
+                    'careers' => collect(),
+                    'profile' => $profile,
+                    'error' => 'Tidak ditemukan karir yang cocok dengan minat dan kemampuan kamu.'
+                ]
+            );
         }
+
+        // Limit top recommendation
+        $careers = $careers->take(10);
 
         return view(
             'user.recommendation',
